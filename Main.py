@@ -1,6 +1,6 @@
 import os
 import sys
-
+import argparse
 import cv2
 import numpy as np
 import easygui
@@ -61,27 +61,21 @@ class ProcessedWin(QtWidgets.QMainWindow):
         bin = cv2.erode(bin, None)  # dilate made our shape larger, revert that
         bin = cv2.erode(bin, None)
         bin, contours1, hierarchy1 = cv2.findContours(bin, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-        bin, contours2, hierarchy2 = cv2.findContours(bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for x in contours2:
-            if cv2.contourArea(x) == 1.0:
-                contours2.remove(x)
-            epsilon = 0.01 * cv2.arcLength(x, True)
-            approx = cv2.approxPolyDP(x, epsilon, True)
-            hull = cv2.convexHull(x)
-            print(cv2.contourArea(x))
-            M = cv2.moments(x)
-            cx = int(M['m10'] / M['m00'])
-            cy = int(M['m01'] / M['m00'])
-            cv2.circle(processing_image, (cx, cy), 3, (255, 0, 255), -1)
-            leftmost = tuple(x[x[:, :, 0].argmin()][0])
-            rightmost = tuple(x[x[:, :, 0].argmax()][0])
-            topmost = tuple(x[x[:, :, 1].argmin()][0])
-            bottommost = tuple(x[x[:, :, 1].argmax()][0])
-            cv2.circle(processing_image, leftmost, 3, (255, 0, 255), -1)
-            cv2.circle(processing_image, rightmost, 3, (255, 0, 255), -1)
-            cv2.circle(processing_image, topmost, 3, (255, 0, 255), -1)
-            cv2.circle(processing_image, bottommost, 3, (255, 0, 255), -1)
-            cv2.putText(processing_image, 'Center', (cx, cy), font, 0.5, (255, 0, 255), 2, cv2.LINE_AA)
+        hie = hierarchy1[0]
+        for x in zip(contours1, hie):
+            currentContour = x[0]
+            currentHierarchy = x[1]
+            if currentHierarchy[2] < 0:
+                epsilon = 0.1 * cv2.arcLength(currentContour, True)
+                approx = cv2.approxPolyDP(currentContour, epsilon, True)
+                hull = cv2.convexHull(currentContour)
+                print(cv2.contourArea(currentContour))
+                M = cv2.moments(currentContour)
+                cx = int(M['m10'] / M['m00'])
+                cy = int(M['m01'] / M['m00'])
+                cv2.circle(processing_image, (cx, cy), 3, (255, 0, 255), -1)
+                cv2.putText(processing_image, 'C', (cx, cy), font, 0.5, (255, 0, 255), 2, cv2.LINE_AA)
+
         imageforshow = processing_image
         imagelabel_after = self.labelAfter
         height, width, channels = imageforshow.shape
@@ -119,6 +113,9 @@ class MyWin(QtWidgets.QMainWindow):
     def upload_click(self):
         imagelabel = self.label_5
         filepath = easygui.fileopenbox()
+        print(filepath)
+        if not filepath:
+            return 0
         input_image = imread(filepath)
         height, width, channels = input_image.shape
         bytesPerLine = channels * width
@@ -133,8 +130,11 @@ class MyWin(QtWidgets.QMainWindow):
         self.pathforsend = filepath
     def process_click(self):
         pth = self.imagepath()
-        self.dialog = ProcessedWin(pth)
-        self.dialog.show()
+        if not pth:
+            return 0
+        else:
+            self.dialog = ProcessedWin(pth)
+            self.dialog.show()
 
     def imagepath(self):
         return self.pathforsend
