@@ -1,6 +1,6 @@
 import os
 import sys
-import argparse
+
 import cv2
 import numpy as np
 import easygui
@@ -21,13 +21,14 @@ class SaveWin(QtWidgets.QMainWindow):
 
 
 class ProcessedWin(QtWidgets.QMainWindow):
-    def __init__(self, path):
+    def __init__(self, path, x=10, y=10):
         QtWidgets.QMainWindow.__init__(self)
         super(ProcessedWin, self).__init__()
         loadUi('Result.ui', self)
         self.pushButton.clicked.connect(self.goon)
         self.pushButton_2.clicked.connect(self.save)
         imagelabel = self.labelBefore
+        imagelabel_after = self.labelAfter
         input_image = imread(path)
         height, width, channels = input_image.shape
         bytesPerLine = channels * width
@@ -77,7 +78,6 @@ class ProcessedWin(QtWidgets.QMainWindow):
                 cv2.putText(processing_image, 'C', (cx, cy), font, 0.5, (255, 0, 255), 2, cv2.LINE_AA)
 
         imageforshow = processing_image
-        imagelabel_after = self.labelAfter
         height, width, channels = imageforshow.shape
         bytesPerLine = channels * width
         qImg = QtGui.QImage(imageforshow.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
@@ -107,7 +107,8 @@ class MyWin(QtWidgets.QMainWindow):
         self.pushButtonUpload.clicked.connect(self.upload_click)
         self.pushButton_2.clicked.connect(self.process_click)
         self.pushButton.clicked.connect(self.exit)
-
+        self.digit_input_x = self.textEdit
+        self.digit_input_y = self.textEdit_2
 
     @pyqtSlot()
     def upload_click(self):
@@ -133,7 +134,9 @@ class MyWin(QtWidgets.QMainWindow):
         if not pth:
             return 0
         else:
-            self.dialog = ProcessedWin(pth)
+            x = self.digit_input_x.toPlainText()
+            y = self.digit_input_y.toPlainText()
+            self.dialog = ProcessedWin(pth,x,y)
             self.dialog.show()
 
     def imagepath(self):
@@ -142,10 +145,15 @@ class MyWin(QtWidgets.QMainWindow):
     def exit(self):
         self.close()
 
-class Recognition:
-    def __init__(self, path):
-        self.image = cv2.imread(path)
 
+
+class SimpleContour:
+    contour = []
+    number = 1
+    area = 1
+    perimeter = 1
+    center = (1,1)
+    radius = 1
 
 
 if __name__ == '__main__':
