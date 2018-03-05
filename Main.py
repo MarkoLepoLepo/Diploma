@@ -168,7 +168,7 @@ class MyWin(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self)
         super(MyWin, self).__init__()
         loadUi('Base.ui', self)
-        self.setWindowTitle('TestDrive')
+        self.setWindowTitle('Analasys')
         self.pushButtonUpload.clicked.connect(self.upload_click)
         self.pushButton_2.clicked.connect(self.process_click)
         self.pushButton.clicked.connect(self.exit)
