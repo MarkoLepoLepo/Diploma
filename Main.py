@@ -10,16 +10,48 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QIntValidator
 from PyQt5.uic import loadUi
 from scipy.ndimage import imread
+from docx import *
+from datetime import datetime
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = "C:\Python352\Lib\site-packages\PyQt5\plugins\platforms"
+if not os.path.exists("Storage"):
+    os.makedirs('Storage')
 
 
 class SaveWin(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, output_text, contours, processed_image):
         QtWidgets.QMainWindow.__init__(self)
         super(SaveWin, self).__init__()
         loadUi('SaveInfo.ui', self)
         self.setWindowTitle('Save')
+        self.pushButton.clicked.connect(self.save)
+        self.pushButton_2.clicked.connect(self.exit)
+        self.processed_image = processed_image
+        self.output_text = output_text
+        self.contours = contours
+        self.full_name = self.lineEdit
+        self.birthday = self.dateEdit_2
+        self.attendance = self.dateEdit
+        self.description = self.textEdit
+
+    def save(self):
+        print(self.full_name.text())
+        print(self.processed_image)
+        os.makedirs('Storage/'+str(self.full_name.text()))
+        doc = Document()
+        temp = cv2.imread("C:/Users/Marko/Documents/ImageStorage/temp.jpg")
+        cv2.imwrite('Storage/'+str(self.full_name.text())+'/'+str(self.attendance.date().toPyDate()) + '.jpg', temp)
+        doc.add_heading(str(self.full_name.text())+" " + str(self.attendance.date().toPyDate())).bold = True
+        doc.add_paragraph("Birthday:"+str(self.birthday.date().toPyDate()))
+        doc.add_heading("Charasteristics").bold = True
+        doc.add_paragraph(self.output_text)
+        doc.add_heading("Description:").bold = True
+        doc.add_paragraph(str(self.description.toPlainText()))
+        doc.save('Storage/'+str(self.full_name.text())+'/'+str(self.attendance.date().toPyDate()) + '.docx')
+        self.close()
+
+    def exit(self):
+        self.close()
 
 
 class ProcessedWin(QtWidgets.QMainWindow):
@@ -91,8 +123,6 @@ class ProcessedWin(QtWidgets.QMainWindow):
                 current.center = (cx, cy)
                 current.contour_number = z
                 current.perimeter = cv2.arcLength(current.contour, True)
-                current.image = processing_image
-                print(current.perimeter)
                 cv2.circle(processing_image, (cx, cy), 3, (255, 0, 255), -1)
                 cv2.putText(processing_image, str(z) + 'C', (cx, cy), font, 0.5, (255, 0, 255), 2, cv2.LINE_AA)
                 current.leftmost = tuple(currentContour[currentContour[:, :, 0].argmin()][0])
@@ -121,13 +151,15 @@ class ProcessedWin(QtWidgets.QMainWindow):
         imagelabel_after.setScaledContents(True)
         imagelabel_after.setMinimumSize(1, 1)
         imagelabel_after.show()
-
+        dt = datetime.today()
+        cv2.imwrite("C:/Users/Marko/Documents/ImageStorage/temp.jpg", processing_image)
+        self.processed_image = "C:/Users/Marko/Documents/ImageStorage/temp.jpg"
 
     def goon(self):
         self.close()
 
     def save(self):
-        self.dialog = SaveWin()
+        self.dialog = SaveWin(self.output_text.toPlainText(), self.contours, self.processed_image)
         self.dialog.show()
 
 
@@ -194,3 +226,4 @@ if __name__ == '__main__':
     widget = MyWin()
     widget.show()
     sys.exit(app.exec_())
+    widget.show(sys.exit(app.exec_()))
