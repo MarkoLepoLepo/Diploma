@@ -14,16 +14,6 @@
    <string>Result</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QTextBrowser" name="textBrowser">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>480</y>
-      <width>311</width>
-      <height>471</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
@@ -123,6 +113,16 @@
     </property>
     <property name="text">
      <string/>
+    </property>
+   </widget>
+   <widget class="QTextEdit" name="textEdit">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>490</y>
+      <width>291</width>
+      <height>471</height>
+     </rect>
     </property>
    </widget>
   </widget>

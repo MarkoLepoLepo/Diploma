@@ -1,11 +1,13 @@
 import os
 import sys
 
+import json
 import cv2
 import numpy as np
 import easygui
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtGui import QIntValidator
 from PyQt5.uic import loadUi
 from scipy.ndimage import imread
 
@@ -21,12 +23,15 @@ class SaveWin(QtWidgets.QMainWindow):
 
 
 class ProcessedWin(QtWidgets.QMainWindow):
-    def __init__(self, path, x=10, y=10):
+    def __init__(self, path, x, y):
         QtWidgets.QMainWindow.__init__(self)
         super(ProcessedWin, self).__init__()
         loadUi('Result.ui', self)
         self.pushButton.clicked.connect(self.goon)
         self.pushButton_2.clicked.connect(self.save)
+        self.output_text = self.textEdit
+        self.dimensional_area = x*y
+        self.contours = []
         imagelabel = self.labelBefore
         imagelabel_after = self.labelAfter
         input_image = imread(path)
@@ -63,6 +68,8 @@ class ProcessedWin(QtWidgets.QMainWindow):
         bin = cv2.erode(bin, None)
         bin, contours1, hierarchy1 = cv2.findContours(bin, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
         hie = hierarchy1[0]
+        self.output_text_val = ""
+        z = 1
         for x in zip(contours1, hie):
             currentContour = x[0]
             currentHierarchy = x[1]
@@ -70,13 +77,39 @@ class ProcessedWin(QtWidgets.QMainWindow):
                 epsilon = 0.1 * cv2.arcLength(currentContour, True)
                 approx = cv2.approxPolyDP(currentContour, epsilon, True)
                 hull = cv2.convexHull(currentContour)
-                print(cv2.contourArea(currentContour))
-                M = cv2.moments(currentContour)
-                cx = int(M['m10'] / M['m00'])
-                cy = int(M['m01'] / M['m00'])
+                current = Object()
+                current.contour = currentContour
+                current.area = (self.dimensional_area*cv2.contourArea(currentContour)/bin.size)
+                current.equi_diameter = np.sqrt(4*current.area/np.pi)
+                (x, y), (MA, ma), angle = cv2.fitEllipse(current.contour)
+                current.major_axis = MA
+                current.minor_axis = ma
+                Momentum = cv2.moments(currentContour)
+                cx = int(Momentum['m10'] / Momentum['m00'])
+                cy = int(Momentum['m01'] / Momentum['m00'])
+                current.momentum = Momentum
+                current.center = (cx, cy)
+                current.contour_number = z
+                current.perimeter = cv2.arcLength(current.contour, True)
+                current.image = processing_image
+                print(current.perimeter)
                 cv2.circle(processing_image, (cx, cy), 3, (255, 0, 255), -1)
-                cv2.putText(processing_image, 'C', (cx, cy), font, 0.5, (255, 0, 255), 2, cv2.LINE_AA)
+                cv2.putText(processing_image, str(z) + 'C', (cx, cy), font, 0.5, (255, 0, 255), 2, cv2.LINE_AA)
+                current.leftmost = tuple(currentContour[currentContour[:, :, 0].argmin()][0])
+                current.rightmost = tuple(currentContour[currentContour[:, :, 0].argmax()][0])
+                current.topmost = tuple(currentContour[currentContour[:, :, 1].argmin()][0])
+                current.bottommost = tuple(currentContour[currentContour[:, :, 1].argmax()][0])
+                cv2.circle(processing_image, current.leftmost, 5, (255, 0, 255), -1)
+                cv2.circle(processing_image, current.rightmost, 5, (255, 0, 255), -1)
+                cv2.circle(processing_image, current.topmost, 5, (255, 0, 255), -1)
+                cv2.circle(processing_image, current.bottommost, 5, (255, 0, 255), -1)
+                processing_image = cv2.drawContours(processing_image, currentContour, -1, (0, 0, 255), 2)
+                self.contours.append(current)
+                z = z + 1
+                self.output_text_val += "Contour" + str(current.contour_number) + ":" + '\n' + "Perimenter:" + str(current.perimeter) + '\n' + "Area(cm^2):" + str(current.area) + '\n'
+                self.output_text_val += "Equivalent diameter:" + str(current.equi_diameter) + '\n'
 
+        self.output_text.setText(self.output_text_val)
         imageforshow = processing_image
         height, width, channels = imageforshow.shape
         bytesPerLine = channels * width
@@ -107,8 +140,11 @@ class MyWin(QtWidgets.QMainWindow):
         self.pushButtonUpload.clicked.connect(self.upload_click)
         self.pushButton_2.clicked.connect(self.process_click)
         self.pushButton.clicked.connect(self.exit)
-        self.digit_input_x = self.textEdit
-        self.digit_input_y = self.textEdit_2
+        self.digit_input_x = self.lineEdit
+        self.digit_input_y = self.lineEdit_2
+        self.onlyInt = QIntValidator()
+        self.digit_input_x.setValidator(self.onlyInt)
+        self.digit_input_y.setValidator(self.onlyInt)
 
     @pyqtSlot()
     def upload_click(self):
@@ -134,9 +170,11 @@ class MyWin(QtWidgets.QMainWindow):
         if not pth:
             return 0
         else:
-            x = self.digit_input_x.toPlainText()
-            y = self.digit_input_y.toPlainText()
-            self.dialog = ProcessedWin(pth,x,y)
+            x = self.digit_input_x.text()
+            y = self.digit_input_y.text()
+            x = int(x)
+            y = int(y)
+            self.dialog = ProcessedWin(pth, x, y)
             self.dialog.show()
 
     def imagepath(self):
@@ -146,14 +184,9 @@ class MyWin(QtWidgets.QMainWindow):
         self.close()
 
 
-
-class SimpleContour:
-    contour = []
-    number = 1
-    area = 1
-    perimeter = 1
-    center = (1,1)
-    radius = 1
+class Object:
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
 
 if __name__ == '__main__':
